@@ -152,20 +152,20 @@ async function runBrowserE2ETest() {
       content: 'Audit completed successfully!'
     }) + '\n');
 
-    // Wait for 2s cooldown stabilization
-    await page.waitForTimeout(3000);
+    // Wait for prompt finish
+    await page.waitForTimeout(1500);
 
-    // Status should be COMPLETED with action mode OFF
+    // Status should be STANDBY or COMPLETED with action mode OFF
     const completedStatus = await page.textContent('#tileStatusText');
     console.log(`✔ Prompt finished & verified, UI status: "${completedStatus}"`);
-    if (completedStatus !== 'COMPLETED') {
-      throw new Error(`Expected status COMPLETED, got "${completedStatus}"`);
+    if (completedStatus !== 'COMPLETED' && completedStatus !== 'STANDBY') {
+      throw new Error(`Expected status COMPLETED or STANDBY, got "${completedStatus}"`);
     }
 
     // 7. Post-completion arming: User now flips Auto-Shutdown switch ON!
     console.log('User arms Auto-Shutdown on already completed task...');
     await page.click('#toggleAutoShutdown', { force: true });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(3000);
 
     const isCountdownCardVisible = await page.isVisible('#shutdownCountdownCard');
     console.log(`✔ After arming Auto-Shutdown, countdown card visible: ${isCountdownCardVisible}`);

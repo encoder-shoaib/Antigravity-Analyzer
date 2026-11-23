@@ -228,36 +228,44 @@ class VerificationEngine {
         this.state.overallStatus = 'EXECUTING';
       }
     } else {
-      // All signals are green -> Increment continuous stable seconds
-      this.consecutiveStableSeconds += 1;
-      this.state.cooldownElapsedSeconds = this.consecutiveStableSeconds;
-      const target = this.state.cooldownTargetSeconds;
-      this.state.verificationProgressPercent = Math.min(100, Math.round((this.consecutiveStableSeconds / target) * 100));
+      // All signals are green
+      const isActionArmed = Boolean(this.state.autoShutdownEnabled || this.state.autoSleepEnabled);
 
-      if (this.consecutiveStableSeconds < target) {
-        this.state.overallStatus = 'VERIFYING';
-        this.state.reasonsBlocked = [`Verifying completion stability (${this.consecutiveStableSeconds}/${target}s)`];
+      if (!isActionArmed) {
+        // Stabilization Timer starts ONLY when Auto-Shutdown or Auto-Sleep is enabled!
+        this.consecutiveStableSeconds = 0;
+        this.state.cooldownElapsedSeconds = 0;
+        this.state.verificationProgressPercent = 0;
+        this.state.overallStatus = 'STANDBY';
+        this.state.reasonsBlocked = ['Prompt completed. Enable Auto-Shutdown or Auto-Sleep to begin stabilization timer.'];
       } else {
-        // Cooldown target reached! Task verified as fully completed!
-        if (this.state.overallStatus !== 'COMPLETED' && this.state.overallStatus !== 'CONFIRMATION_PENDING') {
-          logger.audit('VerificationEngine', 'Task completion FULLY VERIFIED across all multi-signals!');
-          eventBus.emit('prompt:verified_completed', {
-            prompt: this.state.currentPrompt,
-            verificationDurationSeconds: this.consecutiveStableSeconds
-          });
+        // All signals green AND an action is enabled -> Increment continuous stable seconds
+        this.consecutiveStableSeconds += 1;
+        this.state.cooldownElapsedSeconds = this.consecutiveStableSeconds;
+        const target = this.state.cooldownTargetSeconds;
+        this.state.verificationProgressPercent = Math.min(100, Math.round((this.consecutiveStableSeconds / target) * 100));
 
-          if (!this.state.autoShutdownEnabled && !this.state.autoSleepEnabled) {
-            this.state.overallStatus = 'COMPLETED';
-            this.state.reasonsBlocked = ['Prompt completed. Action mode is OFF.'];
-            logger.info('VerificationEngine', 'Task verified complete. Action mode is OFF.');
-          } else if (this.state.manualConfirmationMode) {
-            this.state.overallStatus = 'CONFIRMATION_PENDING';
-            const act = this.state.autoSleepEnabled ? 'sleep' : 'shutdown';
-            this.state.reasonsBlocked = [`Manual confirmation required before ${act}`];
-          } else {
-            this.state.overallStatus = 'COMPLETED';
-            this.state.reasonsBlocked = [];
-            eventBus.emit('shutdown:ready');
+        if (this.consecutiveStableSeconds < target) {
+          this.state.overallStatus = 'VERIFYING';
+          this.state.reasonsBlocked = [`Verifying completion stability (${this.consecutiveStableSeconds}/${target}s)`];
+        } else {
+          // Cooldown target reached! Task verified as fully completed!
+          if (this.state.overallStatus !== 'SHUTDOWN_COUNTDOWN' && this.state.overallStatus !== 'SHUTDOWN_TRIGGERED' && this.state.overallStatus !== 'CONFIRMATION_PENDING') {
+            logger.audit('VerificationEngine', 'Task completion FULLY VERIFIED across all multi-signals!');
+            eventBus.emit('prompt:verified_completed', {
+              prompt: this.state.currentPrompt,
+              verificationDurationSeconds: this.consecutiveStableSeconds
+            });
+
+            if (this.state.manualConfirmationMode) {
+              this.state.overallStatus = 'CONFIRMATION_PENDING';
+              const act = this.state.autoSleepEnabled ? 'sleep' : 'shutdown';
+              this.state.reasonsBlocked = [`Manual confirmation required before ${act}`];
+            } else {
+              this.state.overallStatus = 'COMPLETED';
+              this.state.reasonsBlocked = [];
+              eventBus.emit('shutdown:ready');
+            }
           }
         }
       }
@@ -307,9 +315,17 @@ class VerificationEngine {
       this.state.autoSleepEnabled = false;
       this.state.targetAction = 'SHUTDOWN';
       this.state.isEmergencyStopped = false;
-      logger.safety('VerificationEngine', 'Auto-Shutdown ARMED. PC will shut down after verified completion.');
+      this.consecutiveStableSeconds = 0;
+      this.state.cooldownElapsedSeconds = 0;
+      this.state.verificationProgressPercent = 0;
+      logger.safety('VerificationEngine', 'Auto-Shutdown ARMED. Stabilization timer will start when all signals pass.');
     } else {
-      if (!this.state.autoSleepEnabled) this.state.targetAction = 'NONE';
+      if (!this.state.autoSleepEnabled) {
+        this.state.targetAction = 'NONE';
+        this.consecutiveStableSeconds = 0;
+        this.state.cooldownElapsedSeconds = 0;
+        this.state.verificationProgressPercent = 0;
+      }
       logger.info('VerificationEngine', 'Auto-Shutdown disarmed.');
     }
     this.saveSettings();
@@ -317,21 +333,11 @@ class VerificationEngine {
     // If auto-shutdown was turned OFF during active countdown and sleep is not enabled, cancel countdown cleanly
     if (!this.state.autoShutdownEnabled && !this.state.autoSleepEnabled && this.state.overallStatus === 'SHUTDOWN_COUNTDOWN') {
       logger.info('VerificationEngine', 'Action turned OFF by user. Cancelling countdown.');
-      this.state.overallStatus = 'COMPLETED';
+      this.state.overallStatus = 'STANDBY';
       this.state.reasonsBlocked = ['Action mode turned OFF. Computer will stay running.'];
       eventBus.emit('action:disabled');
     }
 
-    // If task was already completed and user enables auto-shutdown, start countdown immediately
-    if (this.state.autoShutdownEnabled && (this.state.overallStatus === 'COMPLETED' || this.consecutiveStableSeconds >= this.state.cooldownTargetSeconds)) {
-      if (this.state.manualConfirmationMode) {
-        this.state.overallStatus = 'CONFIRMATION_PENDING';
-        this.state.reasonsBlocked = ['Manual confirmation required before shutdown'];
-      } else {
-        logger.audit('VerificationEngine', 'Auto-shutdown enabled on verified task -> triggering shutdown countdown!');
-        eventBus.emit('shutdown:ready');
-      }
-    }
     this.emitState();
   }
 
@@ -346,9 +352,17 @@ class VerificationEngine {
       this.state.autoShutdownEnabled = false;
       this.state.targetAction = 'SLEEP';
       this.state.isEmergencyStopped = false;
-      logger.safety('VerificationEngine', 'Auto-Sleep ARMED. PC will sleep after verified completion.');
+      this.consecutiveStableSeconds = 0;
+      this.state.cooldownElapsedSeconds = 0;
+      this.state.verificationProgressPercent = 0;
+      logger.safety('VerificationEngine', 'Auto-Sleep ARMED. Stabilization timer will start when all signals pass.');
     } else {
-      if (!this.state.autoShutdownEnabled) this.state.targetAction = 'NONE';
+      if (!this.state.autoShutdownEnabled) {
+        this.state.targetAction = 'NONE';
+        this.consecutiveStableSeconds = 0;
+        this.state.cooldownElapsedSeconds = 0;
+        this.state.verificationProgressPercent = 0;
+      }
       logger.info('VerificationEngine', 'Auto-Sleep disarmed.');
     }
     this.saveSettings();
@@ -356,21 +370,11 @@ class VerificationEngine {
     // If auto-sleep was turned OFF during active countdown and shutdown is not enabled, cancel countdown cleanly
     if (!this.state.autoSleepEnabled && !this.state.autoShutdownEnabled && this.state.overallStatus === 'SHUTDOWN_COUNTDOWN') {
       logger.info('VerificationEngine', 'Action turned OFF by user. Cancelling countdown.');
-      this.state.overallStatus = 'COMPLETED';
+      this.state.overallStatus = 'STANDBY';
       this.state.reasonsBlocked = ['Action mode turned OFF. Computer will stay running.'];
       eventBus.emit('action:disabled');
     }
 
-    // If task was already completed and user enables auto-sleep, start countdown immediately
-    if (this.state.autoSleepEnabled && (this.state.overallStatus === 'COMPLETED' || this.consecutiveStableSeconds >= this.state.cooldownTargetSeconds)) {
-      if (this.state.manualConfirmationMode) {
-        this.state.overallStatus = 'CONFIRMATION_PENDING';
-        this.state.reasonsBlocked = ['Manual confirmation required before sleep'];
-      } else {
-        logger.audit('VerificationEngine', 'Auto-sleep enabled on verified task -> triggering sleep countdown!');
-        eventBus.emit('shutdown:ready');
-      }
-    }
     this.emitState();
   }
 
