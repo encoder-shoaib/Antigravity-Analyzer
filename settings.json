@@ -1,0 +1,8 @@
+{
+  "autoShutdownEnabled": false,
+  "autoSleepEnabled": false,
+  "targetAction": "NONE",
+  "dryRunMode": false,
+  "manualConfirmationMode": false,
+  "cooldownTargetSeconds": 20
+}

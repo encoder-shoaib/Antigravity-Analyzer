@@ -1,0 +1,23 @@
+{
+  "name": "antigravity-analyzer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test/test-safety.js",
+    "test:live": "node test/test-live-simulation.js",
+    "test:e2e": "node test/test-ui-and-e2e.js",
+    "test:mock": "node test/mock-antigravity.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "playwright": "^1.65.1",
+    "ws": "^8.23.0"
+  }
+}
