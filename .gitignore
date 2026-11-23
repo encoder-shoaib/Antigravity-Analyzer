@@ -6,3 +6,5 @@ logs/*.jsonl
 .env.local
 .DS_Store
 Thumbs.db
+test/mock_brain_live/
+test/mock_brain_e2e/

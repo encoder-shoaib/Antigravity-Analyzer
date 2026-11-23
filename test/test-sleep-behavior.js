@@ -32,12 +32,12 @@ async function runSleepTests() {
     tabCloseCalled = true;
   };
 
-  // Test 1: Safe Dry-Run Mode defaults to enabled (true)
-  assert.strictEqual(ve.state.dryRunMode, true, 'Safe Dry-Run Mode must default to enabled (true)');
+  // Test 1: Arming Auto-Sleep sets Live mode (dryRunMode = false)
   ve.toggleAutoSleep(true);
   assert.strictEqual(ve.state.autoSleepEnabled, true, 'Auto-Sleep should be enabled');
   assert.strictEqual(ve.state.targetAction, 'SLEEP', 'Target action should be SLEEP');
-  console.log('✔ Test 1 PASS: Safe Dry-Run Mode is default enabled (true)');
+  assert.strictEqual(ve.state.dryRunMode, false, 'Auto-Sleep must be in Live mode for real sleep');
+  console.log('✔ Test 1 PASS: Arming Auto-Sleep sets live execution mode (dryRunMode = false)');
 
   // Test 2: Auto-Sleep execution does NOT close browser tabs or apps
   tabCloseCalled = false;

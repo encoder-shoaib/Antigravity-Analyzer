@@ -191,7 +191,14 @@ class ShutdownController {
       const shutdownCmd = 'shutdown /s /f /t 2 /c "Google Antigravity task verified and completed. All tabs closed. Shutting down."';
       exec(shutdownCmd, (err) => {
         if (err) {
-          logger.error('ShutdownController', `Windows shutdown command failed: ${err.message}`);
+          logger.warn('ShutdownController', `Windows shutdown command failed: ${err.message}. Trying PowerShell Stop-Computer fallback...`);
+          exec('powershell -NoProfile -Command "Stop-Computer -Force"', (psErr) => {
+            if (psErr) {
+              logger.error('ShutdownController', `PowerShell Stop-Computer fallback failed: ${psErr.message}`);
+            } else {
+              logger.success('ShutdownController', 'PowerShell Stop-Computer signal dispatched successfully.');
+            }
+          });
           return;
         }
         logger.success('ShutdownController', 'Windows shutdown signal dispatched successfully.');

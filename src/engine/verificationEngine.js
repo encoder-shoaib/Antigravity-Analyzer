@@ -33,7 +33,7 @@ class VerificationEngine {
       autoShutdownEnabled: typeof savedSettings.autoShutdownEnabled === 'boolean' ? savedSettings.autoShutdownEnabled : false,
       autoSleepEnabled: typeof savedSettings.autoSleepEnabled === 'boolean' ? savedSettings.autoSleepEnabled : false,
       targetAction: savedSettings.autoSleepEnabled ? 'SLEEP' : (savedSettings.autoShutdownEnabled ? 'SHUTDOWN' : 'NONE'),
-      dryRunMode: typeof savedSettings.dryRunMode === 'boolean' ? savedSettings.dryRunMode : true,
+      dryRunMode: typeof savedSettings.dryRunMode === 'boolean' ? savedSettings.dryRunMode : config.SAFETY.DRY_RUN_MODE,
       manualConfirmationMode: typeof savedSettings.manualConfirmationMode === 'boolean' ? savedSettings.manualConfirmationMode : config.SAFETY.MANUAL_CONFIRMATION_MODE,
       hasTriggeredSleep: false,
       reasonsBlocked: [],
@@ -315,10 +315,11 @@ class VerificationEngine {
       this.state.autoSleepEnabled = false;
       this.state.targetAction = 'SHUTDOWN';
       this.state.isEmergencyStopped = false;
+      this.state.dryRunMode = false; // Live execution: disarm dry run so PC actually shuts down
       this.consecutiveStableSeconds = 0;
       this.state.cooldownElapsedSeconds = 0;
       this.state.verificationProgressPercent = 0;
-      logger.safety('VerificationEngine', 'Auto-Shutdown ARMED. Stabilization timer will start when all signals pass.');
+      logger.safety('VerificationEngine', 'Auto-Shutdown ARMED (Live Mode). PC will shut down after verified completion.');
     } else {
       if (!this.state.autoSleepEnabled) {
         this.state.targetAction = 'NONE';
@@ -352,10 +353,11 @@ class VerificationEngine {
       this.state.autoShutdownEnabled = false;
       this.state.targetAction = 'SLEEP';
       this.state.isEmergencyStopped = false;
+      this.state.dryRunMode = false; // Live execution: disarm dry run so PC actually sleeps
       this.consecutiveStableSeconds = 0;
       this.state.cooldownElapsedSeconds = 0;
       this.state.verificationProgressPercent = 0;
-      logger.safety('VerificationEngine', 'Auto-Sleep ARMED. Stabilization timer will start when all signals pass.');
+      logger.safety('VerificationEngine', 'Auto-Sleep ARMED (Live Mode). PC will sleep after verified completion.');
     } else {
       if (!this.state.autoShutdownEnabled) {
         this.state.targetAction = 'NONE';

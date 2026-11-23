@@ -39,7 +39,7 @@ module.exports = {
     // Auto Shutdown toggle (default false, can be toggled in UI)
     AUTO_SHUTDOWN_ENABLED: process.env.AUTO_SHUTDOWN_ENABLED === 'true', // Controlled by UI toggle
     // DRY RUN MODE: If true, will simulate shutdown/sleep without actually turning off/sleeping PC
-    DRY_RUN_MODE: process.env.DRY_RUN_MODE !== 'false', // Default true for safe simulation
+    DRY_RUN_MODE: process.env.DRY_RUN_MODE === 'true', // Controlled by UI toggle (default false for live execution)
     // Manual confirmation required before initiating shutdown countdown
     MANUAL_CONFIRMATION_MODE: process.env.MANUAL_CONFIRMATION_MODE === 'true', // Controlled by UI toggle
     // Maximum prompt execution timeout in minutes (alert if exceeded)
