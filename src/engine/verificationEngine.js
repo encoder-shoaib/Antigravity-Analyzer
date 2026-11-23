@@ -33,7 +33,7 @@ class VerificationEngine {
       autoShutdownEnabled: typeof savedSettings.autoShutdownEnabled === 'boolean' ? savedSettings.autoShutdownEnabled : false,
       autoSleepEnabled: typeof savedSettings.autoSleepEnabled === 'boolean' ? savedSettings.autoSleepEnabled : false,
       targetAction: savedSettings.autoSleepEnabled ? 'SLEEP' : (savedSettings.autoShutdownEnabled ? 'SHUTDOWN' : 'NONE'),
-      dryRunMode: typeof savedSettings.dryRunMode === 'boolean' ? savedSettings.dryRunMode : config.SAFETY.DRY_RUN_MODE,
+      dryRunMode: typeof savedSettings.dryRunMode === 'boolean' ? savedSettings.dryRunMode : true,
       manualConfirmationMode: typeof savedSettings.manualConfirmationMode === 'boolean' ? savedSettings.manualConfirmationMode : config.SAFETY.MANUAL_CONFIRMATION_MODE,
       hasTriggeredSleep: false,
       reasonsBlocked: [],
@@ -346,7 +346,6 @@ class VerificationEngine {
       this.state.autoShutdownEnabled = false;
       this.state.targetAction = 'SLEEP';
       this.state.isEmergencyStopped = false;
-      this.state.dryRunMode = false;
       logger.safety('VerificationEngine', 'Auto-Sleep ARMED. PC will sleep after verified completion.');
     } else {
       if (!this.state.autoShutdownEnabled) this.state.targetAction = 'NONE';
